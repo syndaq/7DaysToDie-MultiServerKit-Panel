@@ -53,7 +53,11 @@ export class ModApiClient {
   async requestRaw(
     method: string,
     path: string,
-    options?: { body?: unknown; query?: Record<string, string | string[] | number | boolean | undefined> },
+    options?: {
+      body?: unknown;
+      query?: Record<string, string | string[] | number | boolean | undefined>;
+      headers?: Record<string, string>;
+    },
   ): Promise<{ status: number; data: unknown; contentType: string }> {
     let url = path.startsWith('/') ? path : `/${path}`;
     if (options?.query) {
@@ -83,6 +87,11 @@ export class ModApiClient {
     try {
       const headers = new Headers(init.headers);
       headers.set('X-Api-Key', this.apiKey);
+      if (options?.headers) {
+        for (const [key, value] of Object.entries(options.headers)) {
+          headers.set(key, value);
+        }
+      }
       if (init.body !== undefined) {
         headers.set('Content-Type', 'application/json');
       }

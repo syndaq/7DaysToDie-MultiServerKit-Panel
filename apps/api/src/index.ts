@@ -12,6 +12,8 @@ import { vipGiftRoutes } from './routes/vip-gifts.js';
 import { cdKeyRoutes } from './routes/cd-keys.js';
 import { levelGiftRoutes } from './routes/level-gifts.js';
 import { pointLogRoutes } from './routes/point-log.js';
+import { pointsIngestRoutes } from './routes/points-ingest.js';
+import { wsRoutes } from './routes/ws.js';
 import { authRoutes } from './routes/auth.js';
 import { registerAuthHook } from './plugins/auth.js';
 
@@ -41,6 +43,9 @@ app.get('/health', async () => ({
 
 await app.register(authRoutes);
 await registerAuthHook(app);
+
+await app.register(pointsIngestRoutes);
+await app.register(wsRoutes);
 
 await app.register(serverRoutes);
 await app.register(proxyRoutes);

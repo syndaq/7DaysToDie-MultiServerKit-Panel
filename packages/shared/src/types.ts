@@ -174,6 +174,15 @@ export interface CdKeyRedemptionRecord {
   playerName: string;
 }
 
+export interface ClusterWebSocketMessage {
+  serverId: string;
+  serverName: string;
+  panelServerId: string;
+  modEventType: string;
+  data?: unknown;
+  receivedAt: string;
+}
+
 export interface DashboardSummary {
   serverCount: number;
   serversOnline: number;

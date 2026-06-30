@@ -18,7 +18,11 @@ export async function proxyToMod(
   server: GameServer,
   method: string,
   modPath: string,
-  options?: { body?: unknown; query?: Record<string, string | string[] | number | boolean | undefined> },
+  options?: {
+    body?: unknown;
+    query?: Record<string, string | string[] | number | boolean | undefined>;
+    headers?: Record<string, string>;
+  },
 ) {
   const client = createModClient(server);
   const path = modPath.startsWith('/') ? modPath : `/${modPath}`;

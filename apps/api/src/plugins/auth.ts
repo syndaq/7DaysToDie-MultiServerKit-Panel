@@ -17,7 +17,19 @@ const PUBLIC_ROUTES: Array<{ method: string; path: string }> = [
 
 function isPublicRoute(method: string, url: string): boolean {
   const path = url.split('?')[0] ?? url;
-  return PUBLIC_ROUTES.some((route) => route.method === method && route.path === path);
+  if (PUBLIC_ROUTES.some((route) => route.method === method && route.path === path)) {
+    return true;
+  }
+  if (method === 'GET' && path.startsWith('/api/points/by-platform/')) {
+    return true;
+  }
+  if (method === 'POST' && path === '/api/points/ingest') {
+    return true;
+  }
+  if (method === 'GET' && path === '/api/ws') {
+    return true;
+  }
+  return false;
 }
 
 export async function registerAuthHook(app: FastifyInstance) {

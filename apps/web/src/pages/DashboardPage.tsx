@@ -7,8 +7,10 @@ import { IconChevronRight, IconRefresh, IconServer, IconUsers, IconZap } from '.
 import { EmptyState, LoadingState, PageHeader } from '../components/ui/PageHeader';
 import { StatCard } from '../components/ui/StatCard';
 import { api } from '../lib/api';
+import { formatClusterEvent, useClusterWebSocket } from '../hooks/useClusterWebSocket';
 
 export function DashboardPage() {
+  const { connected, events } = useClusterWebSocket();
   const { data, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['dashboard'],
     queryFn: api.getDashboard,
@@ -21,7 +23,11 @@ export function DashboardPage() {
         title="Dashboard"
         description="Real-time overview of your 7DTD server cluster — players, health, and shared systems at a glance."
         action={
-          <Button
+          <div className="flex items-center gap-3">
+            <Badge variant={connected ? 'success' : 'danger'}>
+              {connected ? 'Live feed connected' : 'Live feed reconnecting…'}
+            </Badge>
+            <Button
             variant="secondary"
             icon={<IconRefresh width={16} height={16} className={isFetching ? 'animate-spin' : ''} />}
             onClick={() => refetch()}
@@ -29,6 +35,7 @@ export function DashboardPage() {
           >
             {isFetching ? 'Refreshing…' : 'Refresh'}
           </Button>
+          </div>
         }
       />
 
@@ -126,6 +133,30 @@ export function DashboardPage() {
                   </Link>
                 ))}
               </div>
+            )}
+          </Card>
+
+          <Card padding={false} className="animate-fade-up stagger-3 mt-8 overflow-hidden">
+            <div className="border-b border-[var(--color-border)] px-5 py-4">
+              <h2 className="font-semibold">Live cluster events</h2>
+              <p className="text-sm text-[var(--color-muted)]">
+                WebSocket stream aggregated from all registered game servers
+              </p>
+            </div>
+            {events.length === 0 ? (
+              <EmptyState
+                title="Waiting for events"
+                description="Chat, logins, and other mod events appear here when servers are online and connected."
+              />
+            ) : (
+              <ul className="max-h-80 divide-y divide-[var(--color-border)] overflow-y-auto">
+                {events.map((event, index) => (
+                  <li key={`${event.receivedAt}-${index}`} className="px-5 py-3 text-sm">
+                    <p className="text-[var(--color-muted)]">{new Date(event.receivedAt).toLocaleTimeString()}</p>
+                    <p className="mt-0.5">{formatClusterEvent(event)}</p>
+                  </li>
+                ))}
+              </ul>
             )}
           </Card>
         </>

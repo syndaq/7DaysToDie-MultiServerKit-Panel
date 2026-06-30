@@ -150,6 +150,8 @@ Ensure ports **5173** and **3001** are open in your firewall/security group.
 | VIP / CD keys / Level gifts | `/api/vip-gifts`, `/api/cd-keys`, `/api/level-gifts` | Cluster rewards |
 | Point log | `/api/point-log/*` | Audit settings and entries |
 | Dashboard | `/api/dashboard` | Aggregated cluster summary |
+| Points ingest (mod) | `POST /api/points/ingest`, `GET /api/points/by-platform/:id` | Cluster-native balance (mod `X-Api-Key` + `X-Server-Id`) |
+| Live events | `GET /api/ws` | WebSocket fan-in from all game servers |
 
 Mod API reference: enable `EnableSwagger` on the game server (dev only) or see the mod repository.
 
@@ -181,11 +183,24 @@ npm run db:studio    # Prisma Studio
 
 ## Production notes
 
+For a full Docker Compose deployment (PostgreSQL + API + nginx), see **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+Manual production checklist:
+
 - Set `SESSION_SECRET` to a strong random value.
 - Set `COOKIE_SECURE=true` when serving the panel over HTTPS.
 - Run PostgreSQL with backups; cluster-wide shop/points/VIP data lives here.
-- Keep mod API port (default 8888) private — only the panel host should reach it.
+- Keep mod API port (default 8888) and WebSocket port (8889) private — only the panel host should reach them.
 - Run `npm run build` and serve the API + static web build behind a reverse proxy.
+
+### Cluster-native points & live events
+
+- Mod `PanelUrl` + `PanelApiKey` + `ServerId` → panel PostgreSQL is the points source of truth (`POST /api/points/ingest`).
+- Dashboard connects to `GET /api/ws` for aggregated mod events (chat, logins, logs) from all servers.
 
 ## Roadmap
 
@@ -195,8 +210,8 @@ npm run db:studio    # Prisma Studio
 - [x] Mod API proxy (all per-server admin pages)
 - [x] Cluster-wide shop, VIP, CD keys, level gifts, lottery, point log
 - [x] Player management, console, permissions, map, teleport, prefabs, schedules
-- [ ] Production deployment guide (Docker compose all-in-one)
-- [ ] WebSocket / live event aggregation from game servers
+- [x] Production deployment guide (Docker compose all-in-one)
+- [x] WebSocket / live event aggregation from game servers
 - [ ] Automated tests and CI
 
 ## Related
