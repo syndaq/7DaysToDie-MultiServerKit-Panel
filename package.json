@@ -1,5 +1,6 @@
 {
   "name": "7daystodie-multiserverkit-panel",
+  "version": "1.0.0",
   "private": true,
   "workspaces": [
     "apps/*",

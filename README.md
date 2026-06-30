@@ -183,6 +183,8 @@ npm run db:studio    # Prisma Studio
 
 ## Production notes
 
+For releases, see **[docs/RELEASE.md](docs/RELEASE.md)** and [GitHub Releases](https://github.com/syndaq/7DaysToDie-MultiServerKit-Panel/releases).
+
 For a full Docker Compose deployment (PostgreSQL + API + nginx), see **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
 
 ```bash
