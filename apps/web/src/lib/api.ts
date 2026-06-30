@@ -69,10 +69,17 @@ import {
 const API_BASE = '';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const { headers: initHeaders, body, ...rest } = init ?? {};
+  const headers = new Headers(initHeaders);
+  if (body != null && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+
   const response = await fetch(`${API_BASE}${path}`, {
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
-    ...init,
+    ...rest,
+    body,
+    headers,
   });
 
   if (!response.ok) {
