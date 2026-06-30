@@ -9,6 +9,7 @@ export class ModWebSocketHub {
   private readonly clientSubscriptions = new Map<ClientSocket, Set<string>>();
   private readonly upstreams = new Map<string, WebSocket>();
   private readonly upstreamListeners = new Map<string, Set<ClientSocket>>();
+  private readonly deletedServerIds = new Set<string>();
 
   subscribeClient(client: ClientSocket, servers: GameServer[]) {
     const serverIds = new Set(servers.map((server) => server.id));
@@ -91,11 +92,31 @@ export class ModWebSocketHub {
     upstream.on('close', () => {
       this.upstreams.delete(server.id);
       setTimeout(() => {
+        if (this.deletedServerIds.has(server.id)) {
+          return;
+        }
         if (this.upstreamListeners.has(server.id)) {
           this.openUpstream(server);
         }
       }, 5_000);
     });
+  }
+
+  teardownServer(serverId: string) {
+    this.deletedServerIds.add(serverId);
+
+    const upstream = this.upstreams.get(serverId);
+    if (upstream) {
+      upstream.removeAllListeners();
+      upstream.close();
+      this.upstreams.delete(serverId);
+    }
+
+    this.upstreamListeners.delete(serverId);
+
+    for (const serverIds of this.clientSubscriptions.values()) {
+      serverIds.delete(serverId);
+    }
   }
 
   startHeartbeat() {

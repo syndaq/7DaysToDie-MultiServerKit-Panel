@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { DataTable } from '../components/ui/DataTable';
@@ -13,6 +14,7 @@ import type { GameServerRecord } from '@msk-panel/shared';
 export function ServersPage() {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [form, setForm] = useState({
     serverId: '',
     name: '',
@@ -35,11 +37,41 @@ export function ServersPage() {
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: api.deleteServer,
+  const updateMutation = useMutation({
+    mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) =>
+      api.updateServer(id, { enabled }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['servers'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: api.deleteServer,
+    onMutate: async (id) => {
+      setDeletingId(id);
+      await queryClient.cancelQueries({ queryKey: ['servers'] });
+      const previous = queryClient.getQueryData<GameServerRecord[]>(['servers']);
+      queryClient.setQueryData<GameServerRecord[]>(
+        ['servers'],
+        (current) => current?.filter((server) => server.id !== id) ?? [],
+      );
+      return { previous };
+    },
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: ['servers'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.removeQueries({ queryKey: ['server', id] });
+      queryClient.removeQueries({ queryKey: ['server-health', id] });
+      queryClient.removeQueries({ queryKey: ['server-stats', id] });
+    },
+    onError: (_error, _id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['servers'], context.previous);
+      }
+    },
+    onSettled: () => {
+      setDeletingId(null);
     },
   });
 
@@ -58,6 +90,14 @@ export function ServersPage() {
           </Button>
         }
       />
+
+      {deleteMutation.isError && (
+        <div className="mb-6">
+          <ErrorBanner
+            message={(deleteMutation.error as Error).message || 'Failed to remove server'}
+          />
+        </div>
+      )}
 
       {showForm && (
         <Card className="mb-6 animate-fade-up" glow>
@@ -152,6 +192,26 @@ export function ServersPage() {
                 ),
               },
               {
+                key: 'enabled',
+                header: 'Enabled',
+                render: (server) => (
+                  <label className="inline-flex cursor-pointer items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={server.enabled}
+                      disabled={updateMutation.isPending}
+                      onChange={(e) => {
+                        updateMutation.mutate({ id: server.id, enabled: e.target.checked });
+                      }}
+                      className="h-4 w-4 rounded border-[var(--color-border)] accent-[var(--color-accent)]"
+                    />
+                    <Badge variant={server.enabled ? 'success' : 'neutral'}>
+                      {server.enabled ? 'On' : 'Off'}
+                    </Badge>
+                  </label>
+                ),
+              },
+              {
                 key: 'actions',
                 header: '',
                 className: 'text-right',
@@ -160,13 +220,14 @@ export function ServersPage() {
                     variant="ghost"
                     size="sm"
                     className="!text-[var(--color-danger)]"
+                    disabled={deletingId === server.id}
                     onClick={() => {
-                      if (confirm(`Remove ${server.name}?`)) {
+                      if (confirm(`Remove ${server.name} from the panel? This cannot be undone.`)) {
                         deleteMutation.mutate(server.id);
                       }
                     }}
                   >
-                    Remove
+                    {deletingId === server.id ? 'Removing…' : 'Remove'}
                   </Button>
                 ),
               },

@@ -1,8 +1,10 @@
 import type { FastifyInstance } from 'fastify';
+import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { ModApiError } from '@msk-panel/shared';
 import { prisma } from '../lib/prisma.js';
 import { createModClient, toPublicServer } from '../lib/mod.js';
+import { modWebSocketHub } from '../lib/mod-ws-hub.js';
 import { probeServer } from './servers-health.js';
 
 const createServerSchema = z.object({
@@ -59,11 +61,17 @@ export async function serverRoutes(app: FastifyInstance) {
   });
 
   app.delete<{ Params: { id: string } }>('/api/servers/:id', async (request, reply) => {
+    const { id } = request.params;
     try {
-      await prisma.gameServer.delete({ where: { id: request.params.id } });
-      return reply.status(204).send();
-    } catch {
-      return reply.status(404).send({ message: 'Server not found' });
+      await prisma.gameServer.delete({ where: { id } });
+      modWebSocketHub.teardownServer(id);
+      return reply.code(204).send();
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        return reply.status(404).send({ message: 'Server not found' });
+      }
+      request.log.error(error, 'Failed to delete game server');
+      return reply.status(500).send({ message: 'Failed to delete server' });
     }
   });
 

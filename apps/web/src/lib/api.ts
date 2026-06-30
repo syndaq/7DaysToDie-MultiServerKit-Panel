@@ -118,6 +118,19 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  updateServer: (
+    id: string,
+    data: {
+      name?: string;
+      apiUrl?: string;
+      apiKey?: string;
+      enabled?: boolean;
+    },
+  ) =>
+    request<GameServerRecord>(`/api/servers/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
   deleteServer: (id: string) =>
     request<void>(`/api/servers/${id}`, { method: 'DELETE' }),
 

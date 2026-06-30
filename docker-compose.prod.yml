@@ -19,12 +19,13 @@ services:
       context: .
       target: api
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-msk}:${POSTGRES_PASSWORD:-msk_prod_password}@postgres:5432/${POSTGRES_DB:-multiserverkit}
       PORT: 3001
       HOST: 0.0.0.0
-      WEB_ORIGIN: ${PANEL_URL:-http://localhost}
-      SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET in .env}
+      NODE_ENV: production
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
     depends_on:
       postgres:

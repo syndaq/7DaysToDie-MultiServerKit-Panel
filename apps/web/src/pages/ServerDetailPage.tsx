@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Badge, StatusDot } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Card, CardHeader } from '../components/ui/Card';
@@ -13,6 +13,8 @@ import type { ModOnlinePlayer } from '@msk-panel/shared';
 
 export function ServerDetailPage() {
   const { id = '' } = useParams();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [command, setCommand] = useState('');
   const [output, setOutput] = useState<string[]>([]);
 
@@ -48,6 +50,16 @@ export function ServerDetailPage() {
     onSuccess: (lines, cmd) => setOutput((prev) => [...prev, `$ ${cmd}`, ...lines, '']),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => api.deleteServer(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['servers'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.removeQueries({ queryKey: ['server', id] });
+      navigate('/servers');
+    },
+  });
+
   if (isLoading) {
     return <LoadingState label="Loading server…" />;
   }
@@ -75,6 +87,19 @@ export function ServerDetailPage() {
             <Badge variant={health?.online ? 'success' : 'danger'}>
               {health?.online ? 'Online' : 'Offline'}
             </Badge>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="!text-[var(--color-danger)]"
+              disabled={deleteMutation.isPending}
+              onClick={() => {
+                if (confirm(`Remove ${server.name} from the panel? This cannot be undone.`)) {
+                  deleteMutation.mutate();
+                }
+              }}
+            >
+              {deleteMutation.isPending ? 'Removing…' : 'Remove'}
+            </Button>
           </div>
         }
       />
@@ -83,6 +108,10 @@ export function ServerDetailPage() {
         <ErrorBanner
           message={`Server is offline or unreachable${health?.error ? `: ${health.error}` : ''}`}
         />
+      )}
+
+      {deleteMutation.isError && (
+        <ErrorBanner message={(deleteMutation.error as Error).message || 'Failed to remove server'} />
       )}
 
       {health?.online && stats && (
