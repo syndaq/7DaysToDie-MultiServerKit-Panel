@@ -32,6 +32,14 @@ npm install
 cp .env.example .env
 ```
 
+Edit `.env` and set `PUBLIC_HOST`, `WEB_ORIGIN`, and `PANEL_URL` to your machine's **physical IP** (not `localhost`):
+
+```env
+PUBLIC_HOST=YOUR-IP-HERE
+WEB_ORIGIN=http://YOUR-IP-HERE:5173
+PANEL_URL=http://YOUR-IP-HERE:5173
+```
+
 ### 4. Start PostgreSQL
 
 ```bash
@@ -51,11 +59,15 @@ npm run db:generate
 npm run dev
 ```
 
-| Service | URL |
-|---------|-----|
-| Web UI | http://localhost:5173 |
-| Panel API | http://localhost:3001 |
-| API health | http://localhost:3001/health |
+Both services bind to `0.0.0.0` so they are reachable on your machine's IP.
+
+| Service | URL (replace with your IP) |
+|---------|----------------------------|
+| Web UI | http://YOUR-IP-HERE:5173 |
+| Panel API | http://YOUR-IP-HERE:3001 |
+| API health | http://YOUR-IP-HERE:3001/health |
+
+Ensure ports **5173** and **3001** are open in your firewall/security group.
 
 ## Project structure
 
