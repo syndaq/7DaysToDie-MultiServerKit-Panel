@@ -32,6 +32,101 @@ export class ModApiClient {
     });
   }
 
+  async put<T>(path: string, body?: unknown): Promise<T> {
+    return this.request<T>(path, {
+      method: 'PUT',
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  }
+
+  async patch<T>(path: string, body?: unknown): Promise<T> {
+    return this.request<T>(path, {
+      method: 'PATCH',
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  }
+
+  async delete<T>(path: string): Promise<T> {
+    return this.request<T>(path, { method: 'DELETE' });
+  }
+
+  async requestRaw(
+    method: string,
+    path: string,
+    options?: { body?: unknown; query?: Record<string, string | string[] | number | boolean | undefined> },
+  ): Promise<{ status: number; data: unknown; contentType: string }> {
+    let url = path.startsWith('/') ? path : `/${path}`;
+    if (options?.query) {
+      const params = new URLSearchParams();
+      for (const [key, value] of Object.entries(options.query)) {
+        if (value === undefined) continue;
+        if (Array.isArray(value)) {
+          for (const item of value) params.append(key, String(item));
+        } else {
+          params.set(key, String(value));
+        }
+      }
+      const qs = params.toString();
+      if (qs) {
+        url += `?${qs}`;
+      }
+    }
+
+    const init: RequestInit = { method };
+    if (options?.body !== undefined) {
+      init.body = JSON.stringify(options.body);
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+
+    try {
+      const headers = new Headers(init.headers);
+      headers.set('X-Api-Key', this.apiKey);
+      if (init.body !== undefined) {
+        headers.set('Content-Type', 'application/json');
+      }
+
+      const response = await fetch(`${this.baseUrl}${url}`, {
+        ...init,
+        headers,
+        signal: controller.signal,
+      });
+
+      const contentType = response.headers.get('content-type') ?? '';
+      let data: unknown;
+      if (contentType.includes('application/json')) {
+        data = await response.json();
+      } else if (
+        contentType.startsWith('image/') ||
+        contentType === 'application/octet-stream'
+      ) {
+        data = Buffer.from(await response.arrayBuffer());
+      } else if (response.status !== 204) {
+        data = await response.text();
+      }
+
+      if (!response.ok) {
+        throw new ModApiError(
+          response.status,
+          typeof data === 'string' ? data : JSON.stringify(data),
+        );
+      }
+
+      return { status: response.status, data, contentType };
+    } catch (error) {
+      if (error instanceof ModApiError) {
+        throw error;
+      }
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new ModApiError(408, 'Request timed out');
+      }
+      throw new ModApiError(0, error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   private async request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);

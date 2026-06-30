@@ -7,6 +7,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// Panel administrator account.
+model AdminUser {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
 /// Registered 7DTD game server running the MultiServerKit mod.
 model GameServer {
   id        String   @id @default(cuid())
@@ -43,30 +52,325 @@ model Player {
   lastSignInAt DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
 
-  cdKeyRedemptions CdKeyRedemption[]
+/// Panel-wide point change audit log settings.
+model PointLogSettings {
+  id             String   @id @default("default")
+  enabled        Boolean  @default(false)
+  retentionDays  Int      @default(0)
+  shopPurchase   Boolean  @default(true)
+  signIn         Boolean  @default(true)
+  pointsTransfer Boolean  @default(true)
+  teleport       Boolean  @default(true)
+  killReward     Boolean  @default(false)
+  lottery        Boolean  @default(true)
+  redeemCode     Boolean  @default(true)
+  levelGift      Boolean  @default(true)
+  vipGift        Boolean  @default(true)
+  webPanel       Boolean  @default(true)
+  externalMod    Boolean  @default(true)
+  other          Boolean  @default(true)
+  updatedAt      DateTime @updatedAt
+}
+
+/// Individual point balance change record for auditing.
+model PointLogEntry {
+  id           String   @id @default(cuid())
+  playerId     String
+  playerName   String
+  category     String
+  type         String
+  change       Int
+  balance      Int
+  note         String?
+  gameServerId String?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([playerId])
+  @@index([category])
 }
 
 /// CD key definitions (shared across the cluster).
 model CdKey {
-  id        String   @id @default(cuid())
-  code      String   @unique
-  points    Int      @default(0)
-  maxUses   Int      @default(1)
-  useCount  Int      @default(0)
-  expiresAt DateTime?
-  createdAt DateTime @default(now())
+  id             String    @id @default(cuid())
+  modId          Int       @unique @default(autoincrement())
+  code           String    @unique
+  redeemCount    Int       @default(0)
+  maxRedeemCount Int       @default(1)
+  expiresAt      DateTime?
+  description    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
+  items       CdKeyItem[]
+  commands    CdKeyCommand[]
   redemptions CdKeyRedemption[]
+}
+
+model CdKeyItem {
+  id          String @id @default(cuid())
+  cdKeyId     String
+  cdKey       CdKey  @relation(fields: [cdKeyId], references: [id], onDelete: Cascade)
+  itemName    String
+  count       Int    @default(1)
+  quality     Int    @default(0)
+  durability  Int    @default(0)
+  description String?
+  sortOrder   Int    @default(0)
+}
+
+model CdKeyCommand {
+  id           String @id @default(cuid())
+  cdKeyId      String
+  cdKey        CdKey  @relation(fields: [cdKeyId], references: [id], onDelete: Cascade)
+  command      String
+  inMainThread Boolean @default(false)
+  description  String?
+  sortOrder    Int    @default(0)
 }
 
 model CdKeyRedemption {
   id         String   @id @default(cuid())
   cdKeyId    String
   cdKey      CdKey    @relation(fields: [cdKeyId], references: [id], onDelete: Cascade)
-  playerId   String
-  player     Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  platformId String
+  playerName String
   redeemedAt DateTime @default(now())
 
-  @@unique([cdKeyId, playerId])
+  @@unique([cdKeyId, platformId])
 }
+
+/// Cluster-wide CD key redeem settings (synced to all game servers).
+model CdKeyRedeemSettings {
+  id                              String   @id @default("default")
+  isEnabled                       Boolean  @default(false)
+  hasAlreadyRedeemedTip           String   @default("")
+  hasReachedMaxRedemptionLimitTip String   @default("")
+  hasRedemptionCodeExpiredTip     String   @default("")
+  redeemSuccessTip                String   @default("")
+  updatedAt                       DateTime @updatedAt
+}
+
+/// Cluster-wide points system settings (synced to all game servers).
+model PointsSystemSettings {
+  id                           String   @id @default("default")
+  isEnabled                    Boolean  @default(false)
+  signInCmd                    String   @default("si")
+  signInInterval               Int      @default(3600)
+  signInRewardPoints           Int      @default(10)
+  signInSuccessTip             String   @default("")
+  signInFailureTip             String   @default("")
+  queryPointsCmd               String   @default("points")
+  queryPointsTip               String   @default("")
+  isCurrencyExchangeEnabled    Boolean  @default(false)
+  currencyToPointsExchangeRate Float    @default(1)
+  currencyExchangeCmd          String   @default("dh")
+  exchangeSuccessTip           String   @default("")
+  exchangeFailureTip           String   @default("")
+  updatedAt                    DateTime @updatedAt
+}
+
+/// Cluster-wide game store settings (synced to all game servers).
+model GameStoreSettings {
+  id                 String   @id @default("default")
+  isEnabled          Boolean  @default(false)
+  queryListCmd       String   @default("buy")
+  buyCmdPrefix       String   @default("buy")
+  goodsItemTip       String   @default("")
+  buySuccessTip      String   @default("")
+  pointsNotEnoughTip String   @default("")
+  noGoods            String   @default("")
+  updatedAt          DateTime @updatedAt
+}
+
+/// Cluster-wide shop product catalog (synced to all game servers).
+model ShopProduct {
+  id          Int      @id @default(autoincrement())
+  name        String
+  price       Int
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items    ShopProductItem[]
+  commands ShopProductCommand[]
+}
+
+model ShopProductItem {
+  id          String      @id @default(cuid())
+  productId   Int
+  product     ShopProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  itemName    String
+  count       Int         @default(1)
+  quality     Int         @default(0)
+  durability  Int         @default(0)
+  description String?
+  sortOrder   Int         @default(0)
+}
+
+model ShopProductCommand {
+  id           String      @id @default(cuid())
+  productId    Int
+  product      ShopProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  command      String
+  inMainThread Boolean     @default(false)
+  description  String?
+  sortOrder    Int         @default(0)
+}
+
+/// Cluster-wide lottery settings (synced to all game servers).
+model LotterySettings {
+  id                 String   @id @default("default")
+  isEnabled          Boolean  @default(false)
+  queryListCmd       String   @default("lottery")
+  drawCmdPrefix      String   @default("draw")
+  drawCost           Int      @default(10)
+  drawInterval       Int      @default(60)
+  poolItemTip        String   @default("")
+  drawSuccessTip     String   @default("")
+  pointsNotEnoughTip String   @default("")
+  coolingTip         String   @default("")
+  noPoolTip          String   @default("")
+  updatedAt          DateTime @updatedAt
+}
+
+/// Cluster-wide lottery pool catalog (synced to all game servers).
+model LotteryPool {
+  id          Int      @id @default(autoincrement())
+  name        String
+  drawCost    Int
+  weight      Int      @default(1)
+  isEnabled   Boolean  @default(true)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items    LotteryPoolItem[]
+  commands LotteryPoolCommand[]
+}
+
+model LotteryPoolItem {
+  id            String      @id @default(cuid())
+  lotteryPoolId Int
+  lotteryPool   LotteryPool @relation(fields: [lotteryPoolId], references: [id], onDelete: Cascade)
+  itemName      String
+  count         Int         @default(1)
+  quality       Int         @default(0)
+  durability    Int         @default(0)
+  description   String?
+  sortOrder     Int         @default(0)
+}
+
+model LotteryPoolCommand {
+  id            String      @id @default(cuid())
+  lotteryPoolId Int
+  lotteryPool   LotteryPool @relation(fields: [lotteryPoolId], references: [id], onDelete: Cascade)
+  command       String
+  inMainThread  Boolean     @default(false)
+  description   String?
+  sortOrder     Int         @default(0)
+}
+
+/// Cluster-wide VIP gift settings (synced to all game servers).
+model VipGiftSettings {
+  id              String   @id @default("default")
+  isEnabled       Boolean  @default(false)
+  claimCmd        String   @default("VIP")
+  hasClaimedTip   String   @default("")
+  nonVipTip       String   @default("")
+  claimSuccessTip String   @default("")
+  updatedAt       DateTime @updatedAt
+}
+
+/// VIP gift eligibility record — one per player across the cluster.
+model VipGift {
+  id              String    @id
+  displayName     String
+  name            String
+  claimState      Boolean   @default(false)
+  totalClaimCount Int       @default(0)
+  lastClaimAt     DateTime?
+  description     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  items    VipGiftItem[]
+  commands VipGiftCommand[]
+}
+
+model VipGiftItem {
+  id          String  @id @default(cuid())
+  vipGiftId   String
+  vipGift     VipGift @relation(fields: [vipGiftId], references: [id], onDelete: Cascade)
+  itemName    String
+  count       Int     @default(1)
+  quality     Int     @default(0)
+  durability  Int     @default(0)
+  description String?
+  sortOrder   Int     @default(0)
+}
+
+model VipGiftCommand {
+  id           String  @id @default(cuid())
+  vipGiftId    String
+  vipGift      VipGift @relation(fields: [vipGiftId], references: [id], onDelete: Cascade)
+  command      String
+  inMainThread Boolean @default(false)
+  description  String?
+  sortOrder    Int     @default(0)
+}
+
+/// Cluster-wide level gift settings (synced to all game servers).
+model LevelGiftSettings {
+  id                String   @id @default("default")
+  isEnabled         Boolean  @default(false)
+  claimCmd          String   @default("lq")
+  hasClaimedTip     String   @default("")
+  levelNotEnoughTip String   @default("")
+  noGiftTip         String   @default("")
+  claimSuccessTip   String   @default("")
+  updatedAt         DateTime @updatedAt
+}
+
+/// Level gift record — per player or level milestone across the cluster.
+model LevelGift {
+  id              String    @id
+  giftType        String    @default("Level")
+  displayName     String    @default("")
+  name            String
+  requiredLevel   Int       @default(1)
+  claimState      Boolean   @default(false)
+  totalClaimCount Int       @default(0)
+  lastClaimAt     DateTime?
+  description     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  items    LevelGiftItem[]
+  commands LevelGiftCommand[]
+}
+
+model LevelGiftItem {
+  id          String    @id @default(cuid())
+  levelGiftId String
+  levelGift   LevelGift @relation(fields: [levelGiftId], references: [id], onDelete: Cascade)
+  itemName    String
+  count       Int       @default(1)
+  quality     Int       @default(0)
+  durability  Int       @default(0)
+  description String?
+  sortOrder   Int       @default(0)
+}
+
+model LevelGiftCommand {
+  id           String    @id @default(cuid())
+  levelGiftId  String
+  levelGift    LevelGift @relation(fields: [levelGiftId], references: [id], onDelete: Cascade)
+  command      String
+  inMainThread Boolean   @default(false)
+  description  String?
+  sortOrder    Int       @default(0)
+}
+

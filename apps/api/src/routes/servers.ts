@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { ModApiError } from '@msk-panel/shared';
 import { prisma } from '../lib/prisma.js';
 import { createModClient, toPublicServer } from '../lib/mod.js';
+import { probeServer } from './servers-health.js';
 
 const createServerSchema = z.object({
   serverId: z.string().min(1).max(64),
@@ -18,39 +19,6 @@ const updateServerSchema = z.object({
   apiKey: z.string().min(8).optional(),
   enabled: z.boolean().optional(),
 });
-
-async function probeServer(server: { id: string; serverId: string; name: string; apiUrl: string; apiKey: string }) {
-  const started = Date.now();
-  try {
-    const client = createModClient(server);
-    await client.getStats();
-    const latencyMs = Date.now() - started;
-    await prisma.serverHealthCheck.create({
-      data: { gameServerId: server.id, online: true, latencyMs },
-    });
-    return {
-      serverId: server.serverId,
-      name: server.name,
-      online: true,
-      latencyMs,
-      error: null,
-      checkedAt: new Date().toISOString(),
-    };
-  } catch (error) {
-    const message = error instanceof ModApiError ? error.message : 'Health check failed';
-    await prisma.serverHealthCheck.create({
-      data: { gameServerId: server.id, online: false, error: message },
-    });
-    return {
-      serverId: server.serverId,
-      name: server.name,
-      online: false,
-      latencyMs: null,
-      error: message,
-      checkedAt: new Date().toISOString(),
-    };
-  }
-}
 
 export async function serverRoutes(app: FastifyInstance) {
   app.get('/api/servers', async () => {
