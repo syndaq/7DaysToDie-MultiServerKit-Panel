@@ -1,0 +1,32 @@
+name: Publish Wiki
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'wiki/**'
+      - '.github/workflows/publish-wiki.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Push wiki to GitHub
+        env:
+          WIKI_REMOTE: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.wiki.git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          workdir=$(mktemp -d)
+          cp -R wiki/. "$workdir/"
+          cd "$workdir"
+          git init -b master
+          git add .
+          git commit -m "Publish wiki from ${{ github.repository }}@${{ github.sha }}"
+          git push --force "$WIKI_REMOTE" master
