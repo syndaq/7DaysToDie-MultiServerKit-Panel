@@ -1,5 +1,18 @@
 import type { ModServerStats } from './types.js';
 
+function formatFetchError(error: unknown): string {
+  if (!(error instanceof Error)) {
+    return 'Unknown error';
+  }
+
+  const cause = error.cause;
+  if (cause instanceof Error) {
+    return `${error.message}: ${cause.message}`;
+  }
+
+  return error.message;
+}
+
 export interface ModApiClientOptions {
   apiUrl: string;
   apiKey: string;
@@ -130,7 +143,7 @@ export class ModApiClient {
       if (error instanceof Error && error.name === 'AbortError') {
         throw new ModApiError(408, 'Request timed out');
       }
-      throw new ModApiError(0, error instanceof Error ? error.message : 'Unknown error');
+      throw new ModApiError(0, formatFetchError(error));
     } finally {
       clearTimeout(timer);
     }
@@ -171,7 +184,7 @@ export class ModApiClient {
       if (error instanceof Error && error.name === 'AbortError') {
         throw new ModApiError(408, 'Request timed out');
       }
-      throw new ModApiError(0, error instanceof Error ? error.message : 'Unknown error');
+      throw new ModApiError(0, formatFetchError(error));
     } finally {
       clearTimeout(timer);
     }

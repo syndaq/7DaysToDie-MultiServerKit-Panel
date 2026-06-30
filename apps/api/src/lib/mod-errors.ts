@@ -21,6 +21,21 @@ export function formatModConnectionError(error: unknown): string {
   }
 
   if (error.statusCode === 0) {
+    const lower = raw.toLowerCase();
+    if (lower.includes('fetch failed') || lower.includes('econnrefused') || lower.includes('connection refused')) {
+      return [
+        'Mod API port 8888 is not reachable (connection refused).',
+        'The game server may be running but SdtdMultiServerKit failed to start or is still initializing.',
+        'Check the game server log for [LSTY] lines or mod load errors (invalid appsettings.json is common).',
+        'Ensure port 8888 is open from the panel host and WebUrl binds to the public IP.',
+      ].join(' ');
+    }
+    if (lower.includes('enotfound') || lower.includes('getaddrinfo')) {
+      return `Cannot resolve game server host — check the API URL in the panel registry. (${raw})`;
+    }
+    if (lower.includes('timed out') || lower.includes('timeout')) {
+      return 'Connection timed out — check firewall allows the panel host to reach port 8888 on the game server.';
+    }
     return `Unreachable: ${raw}`;
   }
 
