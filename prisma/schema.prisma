@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Registered 7DTD game server running the MultiServerKit mod.
+model GameServer {
+  id        String   @id @default(cuid())
+  serverId  String   @unique
+  name      String
+  apiUrl    String
+  apiKey    String
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  healthChecks ServerHealthCheck[]
+}
+
+/// Periodic health probe results from the panel to a game server mod API.
+model ServerHealthCheck {
+  id           String     @id @default(cuid())
+  gameServerId String
+  gameServer   GameServer @relation(fields: [gameServerId], references: [id], onDelete: Cascade)
+  online       Boolean
+  latencyMs    Int?
+  error        String?
+  checkedAt    DateTime   @default(now())
+
+  @@index([gameServerId, checkedAt])
+}
+
+/// Cross-server player identity (EOS / Steam cross-platform id).
+model Player {
+  id           String   @id @default(cuid())
+  platformId   String   @unique
+  displayName  String
+  points       Int      @default(0)
+  lastSignInAt DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  cdKeyRedemptions CdKeyRedemption[]
+}
+
+/// CD key definitions (shared across the cluster).
+model CdKey {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  points    Int      @default(0)
+  maxUses   Int      @default(1)
+  useCount  Int      @default(0)
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+
+  redemptions CdKeyRedemption[]
+}
+
+model CdKeyRedemption {
+  id         String   @id @default(cuid())
+  cdKeyId    String
+  cdKey      CdKey    @relation(fields: [cdKeyId], references: [id], onDelete: Cascade)
+  playerId   String
+  player     Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  redeemedAt DateTime @default(now())
+
+  @@unique([cdKeyId, playerId])
+}

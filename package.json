@@ -1,0 +1,26 @@
+{
+  "name": "7daystodie-multiserverkit-panel",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"npm run dev -w @msk-panel/api\" \"npm run dev -w @msk-panel/web\"",
+    "dev:api": "npm run dev -w @msk-panel/api",
+    "dev:web": "npm run dev -w @msk-panel/web",
+    "build": "npm run build -w @msk-panel/shared && npm run build -w @msk-panel/api && npm run build -w @msk-panel/web",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "prisma": "^6.8.2",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.8.2"
+  }
+}

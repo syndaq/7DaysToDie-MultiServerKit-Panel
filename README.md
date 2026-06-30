@@ -2,85 +2,126 @@
 
 Central admin panel for [7DaysToDie-MultiServerKit](https://github.com/syndaq/7DaysToDie-MultiServerKit). Manages multiple 7 Days to Die dedicated servers from a single web interface.
 
+## Stack
+
+| Layer | Technology |
+|-------|------------|
+| Frontend | React 19 + Vite + Tailwind CSS v4 + TanStack Query |
+| Backend | Fastify + TypeScript |
+| Database | PostgreSQL + Prisma |
+| Shared | `@msk-panel/shared` (types + mod API client) |
+
+## Quick start
+
+### 1. Prerequisites
+
+- Node.js 20+
+- Docker (for PostgreSQL)
+
+### 2. Install dependencies
+
+```bash
+git clone https://github.com/syndaq/7DaysToDie-MultiServerKit-Panel.git
+cd 7DaysToDie-MultiServerKit-Panel
+npm install
+```
+
+### 3. Configure environment
+
+```bash
+cp .env.example .env
+```
+
+### 4. Start PostgreSQL
+
+```bash
+docker compose up -d
+```
+
+### 5. Initialize database
+
+```bash
+npm run db:push
+npm run db:generate
+```
+
+### 6. Run development servers
+
+```bash
+npm run dev
+```
+
+| Service | URL |
+|---------|-----|
+| Web UI | http://localhost:5173 |
+| Panel API | http://localhost:3001 |
+| API health | http://localhost:3001/health |
+
+## Project structure
+
+```
+7DaysToDie-MultiServerKit-Panel/
+├── apps/
+│   ├── api/                 # Fastify panel API + mod proxy
+│   └── web/                 # Vite + React admin UI
+├── packages/
+│   └── shared/              # Shared types + ModApiClient
+├── prisma/
+│   └── schema.prisma        # PostgreSQL schema
+└── docker-compose.yml
+```
+
+## Registering a game server
+
+1. Configure the mod on your game server (`ApiOnly: true`, `PanelApiKey`, `ServerId`)
+2. Open **Servers** in the panel UI
+3. Add the server's API URL and matching API key
+
+The panel calls the mod API on your behalf — API keys never reach the browser.
+
+## API endpoints (panel)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/health` | Panel API health |
+| GET | `/api/servers` | List registered servers |
+| POST | `/api/servers` | Register a server |
+| GET | `/api/servers/:id/health` | Probe one server |
+| GET | `/api/servers/health/all` | Probe all enabled servers |
+| GET | `/api/servers/:id/stats` | Proxy mod `/api/Server/Stats` |
+
+## Scripts
+
+```bash
+npm run dev          # API + web concurrently
+npm run dev:api      # API only
+npm run dev:web      # Web only
+npm run build        # Production build
+npm run db:migrate   # Create migration
+npm run db:studio    # Prisma Studio
+```
+
 ## Architecture
 
 ```
-┌─────────────────────────────────────┐
-│  Panel VPS (this repo)              │
-│  - Web UI for admins                │
-│  - Shared DB (points, shop, VIP)    │
-│  - Server registry                  │
-└──────────────┬──────────────────────┘
-               │ HTTPS + X-Api-Key
-       ┌───────┼───────┬───────────┐
-       ▼       ▼       ▼           ▼
-   Game Server   Game Server   Game Server
-   (mod API)     (mod API)     (mod API)
+Browser → Panel Web (Vite/React) → Panel API (Fastify) → PostgreSQL
+                                         ↓
+                              Game Server Mod APIs (X-Api-Key)
 ```
-
-Game servers run the [MultiServerKit mod](https://github.com/syndaq/7DaysToDie-MultiServerKit) in **API-only mode** — no web UI on the game server, only a REST API for this panel to call.
-
-## Responsibilities
-
-| Component | Owns |
-|-----------|------|
-| **Panel** (this repo) | Admin login, web UI, shared player data, server list, orchestration |
-| **Mod** (other repo) | Per-server game operations — players, map, console, backups, teleports |
-
-### Shared data (panel database)
-
-- Points and sign-in rewards
-- Game store / shop
-- VIP gifts and status
-- CD keys and redemption history
-
-### Per-server data (mod API)
-
-- Online players, inventory, map
-- Server console and stats
-- Teleport homes/locations on that server
-- Auto-backup, task schedules
-
-## Connecting a game server
-
-Each game server mod is configured with:
-
-```json
-{
-  "ApiOnly": true,
-  "PanelApiKey": "<same-secret-panel-uses>",
-  "ServerId": "us-pve-01",
-  "WebUrl": "http://10.0.0.5:8888"
-}
-```
-
-The panel stores each server's `ServerId`, API URL, and API key, then calls:
-
-```bash
-curl -H "X-Api-Key: <secret>" http://10.0.0.5:8888/api/Server/Stats
-```
-
-## Project status
-
-**Early scaffold.** Planned stack:
-
-- **Frontend:** TBD (React / Vue)
-- **Backend:** TBD (Node / .NET)
-- **Database:** PostgreSQL (or SQLite for dev)
 
 ## Roadmap
 
-- [ ] Panel backend API scaffold
-- [ ] Server registry (add/remove/monitor game servers)
-- [ ] Mod API client library
-- [ ] Shared database schema (points, shop, VIP, CD keys)
+- [x] Monorepo scaffold (React + Fastify + Prisma)
+- [x] Server registry + health checks
+- [x] Mod API client
 - [ ] Admin authentication
-- [ ] Web dashboard UI
-- [ ] Migrate shared features from mod SQLite to panel DB
+- [ ] Shared points / shop / VIP / CD key management
+- [ ] WebSocket aggregation from game servers
+- [ ] Player management UI
 
-## Related repositories
+## Related
 
-- **Game mod (API agent):** https://github.com/syndaq/7DaysToDie-MultiServerKit
+- **Game mod:** https://github.com/syndaq/7DaysToDie-MultiServerKit
 
 ## License
 
