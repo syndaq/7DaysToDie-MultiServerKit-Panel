@@ -135,7 +135,7 @@ export function ServersPage() {
                 label="Panel API key"
                 required
                 type="password"
-                hint="Must match PanelApiKey in the mod's appsettings.json"
+                hint="Must match PanelApiKey on the game server. After first run, also check 7DaysToDieServer_Data/Managed/LSTY_Data/appsettings.json"
                 className="sm:col-span-2"
                 value={form.apiKey}
                 onChange={(e) => setForm({ ...form, apiKey: e.target.value })}

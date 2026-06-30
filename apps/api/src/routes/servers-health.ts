@@ -1,6 +1,7 @@
 import { ModApiError } from '@msk-panel/shared';
 import { prisma } from '../lib/prisma.js';
 import { createModClient } from '../lib/mod.js';
+import { formatModConnectionError } from '../lib/mod-errors.js';
 
 export async function probeServer(server: {
   id: string;
@@ -26,7 +27,7 @@ export async function probeServer(server: {
       checkedAt: new Date().toISOString(),
     };
   } catch (error) {
-    const message = error instanceof ModApiError ? error.message : 'Health check failed';
+    const message = formatModConnectionError(error);
     await prisma.serverHealthCheck.create({
       data: { gameServerId: server.id, online: false, error: message },
     });

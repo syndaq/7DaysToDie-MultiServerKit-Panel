@@ -8,17 +8,17 @@ import { modWebSocketHub } from '../lib/mod-ws-hub.js';
 import { probeServer } from './servers-health.js';
 
 const createServerSchema = z.object({
-  serverId: z.string().min(1).max(64),
-  name: z.string().min(1).max(128),
-  apiUrl: z.string().url(),
-  apiKey: z.string().min(8),
+  serverId: z.string().trim().min(1).max(64),
+  name: z.string().trim().min(1).max(128),
+  apiUrl: z.string().trim().url(),
+  apiKey: z.string().trim().min(8),
   enabled: z.boolean().optional(),
 });
 
 const updateServerSchema = z.object({
-  name: z.string().min(1).max(128).optional(),
-  apiUrl: z.string().url().optional(),
-  apiKey: z.string().min(8).optional(),
+  name: z.string().trim().min(1).max(128).optional(),
+  apiUrl: z.string().trim().url().optional(),
+  apiKey: z.string().trim().min(8).optional(),
   enabled: z.boolean().optional(),
 });
 
