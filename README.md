@@ -217,6 +217,7 @@ Manual production checklist:
 ## Related
 
 - **Game mod:** https://github.com/syndaq/7DaysToDie-MultiServerKit
+- **Wiki:** https://github.com/syndaq/7DaysToDie-MultiServerKit-Panel/wiki ([source in `wiki/`](wiki/))
 
 ## Disclaimer
 The source code of this project is open and transparent. Any disputes arising from or related to the use of this software should be resolved through friendly negotiation. 
