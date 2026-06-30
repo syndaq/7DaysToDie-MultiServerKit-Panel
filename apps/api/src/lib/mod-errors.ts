@@ -25,9 +25,8 @@ export function formatModConnectionError(error: unknown): string {
     if (lower.includes('fetch failed') || lower.includes('econnrefused') || lower.includes('connection refused')) {
       return [
         'Mod API port 8888 is not reachable (connection refused).',
-        'The game server may be running but SdtdMultiServerKit failed to start or is still initializing.',
-        'Check the game server log for [LSTY] lines or mod load errors (invalid appsettings.json is common).',
-        'Ensure port 8888 is open from the panel host and WebUrl binds to the public IP.',
+        'Common cause: the mod is listening on 127.0.0.1 only — check the game log for "API Server running on http://127.0.0.1:8888".',
+        'Fix: set WebUrl to your public IP in Mod/LSTY_Data/appsettings.json (overrides Config/), sync PanelApiKey and ServerId, restart.',
       ].join(' ');
     }
     if (lower.includes('enotfound') || lower.includes('getaddrinfo')) {
