@@ -203,6 +203,11 @@ npm run db:studio    # Prisma Studio
 
 - **Game mod:** https://github.com/syndaq/7DaysToDie-MultiServerKit
 
+## Disclaimer
+The source code of this project is open and transparent. Any disputes arising from or related to the use of this software should be resolved through friendly negotiation. 
+Any private modifications to the code of this project are the sole responsibility of the person who made these modifications. The author team of this software does not assume any responsibility for any form of loss or damage that may be caused to the user or others during the use of this software.
+If the user downloads, installs and uses this software, it means that the user trusts the author team of this software and agrees to the relevant agreements and disclaimers.
+
 ## License
 
 [MIT](LICENSE)
